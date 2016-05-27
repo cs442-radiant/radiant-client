@@ -1,12 +1,16 @@
 package com.radiant.radiantclient;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -67,10 +71,43 @@ public class SendActivity extends AppCompatActivity {
     JSONObject jo;
     JSONArray data;
 
+    // Storage Permissions
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.CHANGE_WIFI_STATE,
+            Manifest.permission.INTERNET,
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.WAKE_LOCK,
+            Manifest.permission.SYSTEM_ALERT_WINDOW,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
+    };
+
+    /**
+     * Checks if the app has permission to write to device storage
+     *
+     * If the app does not has permission then the user will be prompted to grant permissions
+     *
+     * @param activity
+     */
+    public static void verifyStoragePermissions(Activity activity) {
+        // Check if we have write permission
+        ActivityCompat.requestPermissions(
+                activity,
+                PERMISSIONS_STORAGE,
+                REQUEST_EXTERNAL_STORAGE
+        );
+    }
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_send);
+
+        verifyStoragePermissions(this);
 
         Intent intent = getIntent();
         bundleId = intent.getStringExtra("bundleId");
@@ -95,6 +132,7 @@ public class SendActivity extends AppCompatActivity {
             localStoreFilePath = intent.getStringExtra("localStoreFilePath");
             try {
                 File json_file = new File(localStoreFilePath);
+                Log.d("dede", localStoreFilePath);
                 FileInputStream fin = new FileInputStream(json_file);
                 int c;
                 String temp="";
@@ -102,6 +140,8 @@ public class SendActivity extends AppCompatActivity {
                 while( (c = fin.read()) != -1){
                     temp = temp + Character.toString((char)c);
                 }
+
+                Log.d("dede", "temp : " + temp);
 
                 jo = new JSONObject(temp);
                 data = jo.getJSONArray("data");
@@ -114,10 +154,13 @@ public class SendActivity extends AppCompatActivity {
 //                fos.close();
 
             } catch (FileNotFoundException e) {
+                Log.d("dede", e.toString());
                 e.printStackTrace();
             } catch (JSONException e) {
+                Log.d("dede", e.toString());
                 e.printStackTrace();
             } catch (IOException e) {
+                Log.d("dede", e.toString());
                 e.printStackTrace();
             }
         }
