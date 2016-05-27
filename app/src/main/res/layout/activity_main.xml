@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="com.radiant.radiantclient.MainActivity">
+
+    <EditText
+        android:id="@+id/restaurant_title"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:hint="Restaurant Name"
+        android:inputType="text"
+        android:imeOptions="actionSend"
+        android:layout_marginTop="5mm"
+        />
+
+    <EditText
+        android:id="@+id/description"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:hint="Description"
+        android:inputType="text"
+        android:imeOptions="actionSend"
+        android:layout_marginTop="5mm"
+        android:layout_below="@id/restaurant_title"
+        />
+
+    <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/radio"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="3mm"
+        android:layout_below="@id/description">
+        <RadioButton android:id="@+id/radio_pirates"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="network send"
+            android:onClick="onRadioButtonClicked"/>
+        <RadioButton android:id="@+id/radio_ninjas"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="local store"
+            android:onClick="onRadioButtonClicked"/>
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/start_button"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:text="Start"
+        android:textSize="20sp"
+        android:layout_marginLeft="1mm"
+        android:layout_marginTop="2mm"
+        android:layout_below="@id/radio"
+        />
+
+    <TextView
+        android:id="@+id/send_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/black"
+        android:textColorHighlight="@android:color/primary_text_dark"
+        android:layout_below="@id/start_button"
+        android:layout_marginTop="5mm"
+        android:textSize="20dp"
+        android:text="0 unsent samples"
+        />
+
+    <Button
+        android:id="@+id/send_button"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:text="Send"
+        android:textSize="20sp"
+        android:layout_marginLeft="1mm"
+        android:layout_marginTop="2mm"
+        android:layout_below="@id/send_label"
+        />
+
+
+</RelativeLayout>
