@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
@@ -27,6 +28,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.RequestFuture;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
@@ -40,12 +42,17 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 //import okhttp3.MediaType;
 //import okhttp3.OkHttpClient;
 //import okhttp3.Request;
 //import okhttp3.RequestBody;
 //import okhttp3.Response;
+
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -63,7 +70,6 @@ public class MainActivity extends AppCompatActivity {
 
     JSONObject jobj;
 
-    int successCount = 0;
 
 
     // Storage Permissions
@@ -123,98 +129,136 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+//    class UploadBundleId extends AsyncTask<String, Integer, Boolean> {
+//        /** The system calls this to perform work in a worker thread and
+//         * delivers it the parameters given to AsyncTask.execute() */
+//        @Override
+//        protected Boolean doInBackground(String... params) {
+//
+//            return true;
+//        }
+//
+//        @Override
+//        protected void onPostExecute(Boolean result) {
+//            Log.d("dede", "on post execute");
+//        }
+//    }
 
     private void handleSend() {
-        String ext = Environment.getExternalStorageState();
-        if (ext.equals(Environment.MEDIA_MOUNTED)) {
-            File root = Environment.getExternalStorageDirectory().getAbsoluteFile();
-            File dir = new File(root.getAbsolutePath(), "Radiant");
-            if (dir.exists() == false) {
-                dir.mkdir();
-            }
-            successCount = 0;
-            for (File file : dir.listFiles()) {
-                if(!file.getName().contains("SENT")) {
-                    Log.d("dede", file.getAbsolutePath());
-                    jobj = getJsonFromFile(file);
+        new Thread(new Runnable() {
+            public void run() {
 
-                    Log.d("dede", jobj.toString());
-//                    if(true)
-//                        return;
+                String ext = Environment.getExternalStorageState();
 
-
-                    String url = null;
-                    JSONObject jsonBody = null;
-                    try {
-                        url = "http://ec2-54-191-70-38.us-west-2.compute.amazonaws.com:8100/bundle";
-
-                        jsonBody = new JSONObject();
-                        jsonBody.put("restaurantName", jobj.getString("restaurantName"));
-                        jsonBody.put("bundleDescription", jobj.getString("bundleDescription"));
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                if (ext.equals(Environment.MEDIA_MOUNTED)) {
+                    File root = Environment.getExternalStorageDirectory().getAbsoluteFile();
+                    File dir = new File(root.getAbsolutePath(), "Radiant");
+                    if (dir.exists() == false) {
+                        dir.mkdir();
                     }
 
-                    final Toast toast = Toast.makeText(getApplicationContext(), "Sample Send Success", Toast.LENGTH_SHORT);
-                    final Toast ftoast = Toast.makeText(getApplicationContext(), "Sample Send Fail", Toast.LENGTH_SHORT);
+                    for (File file : dir.listFiles()) {
+                        if (!file.getName().contains("SENT")) {
+                            Log.d("dede", "1. file send start! " + file.getAbsolutePath());
 
-                    JsonObjectRequest jsonRequest = new JsonObjectRequest(Request.Method.POST, url, jsonBody,
-                            new Response.Listener<JSONObject>() {
-                                @Override
-                                public void onResponse(JSONObject rjo) {
-                                    try {
-                                        Log.d("dede", "json response " + rjo.toString());
-                                        String bundleId = rjo.getString("bundleId");
-                                        JSONArray data = jobj.getJSONArray("data");
-                                        for(int i=0; i<data.length(); i++) {
-                                            JSONObject sample = data.getJSONObject(i);
-                                            sample.put("bundleId", Integer.parseInt(bundleId));
-                                            Log.d("dede", sample.toString());
-                                            String url = "http://ec2-54-191-70-38.us-west-2.compute.amazonaws.com:8100/sample";
-                                            JsonObjectRequest jsonRequest = new JsonObjectRequest(Request.Method.POST, url, sample,
-                                                    new Response.Listener<JSONObject>() {
-                                                        @Override
-                                                        public void onResponse(JSONObject response) {
-                                                            Log.d("dede", "Response Body : " + response.toString());
-                                                            toast.cancel();
-                                                            toast.show();
-                                                        }
-                                                    },
-                                                    new Response.ErrorListener() {
-                                                        @Override
-                                                        public void onErrorResponse(VolleyError error) {
-                                                            Log.d("dede", "error2 " + error.toString());
-                                                            ftoast.cancel();
-                                                            ftoast.show();
-                                                        }
-                                                    });
+                            jobj = getJsonFromFile(file);
 
-                                            queue.add(jsonRequest);
+                            try {
+                                Log.d("dede", "2. sample count(" + Integer.toString(jobj.getJSONArray("data").length()) + ") bundle file :" + jobj.toString());
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
 
-                                        }
+                            String url = null;
+                            JSONObject jsonBody = null;
+                            try {
+                                url = "http://ec2-54-191-70-38.us-west-2.compute.amazonaws.com:8100/bundle";
 
-                                    } catch (JSONException e) {
-                                        e.printStackTrace();
-                                    }
+                                jsonBody = new JSONObject();
+                                jsonBody.put("restaurantName", jobj.getString("restaurantName"));
+                                jsonBody.put("bundleDescription", jobj.getString("bundleDescription"));
 
-                                }
-                            },
-                            new Response.ErrorListener() {
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+
+                            Log.d("dede", "3. send json - " + jsonBody.toString());
+
+                            final boolean[] errorFlag = {false};
+
+                            RequestFuture<JSONObject> future = RequestFuture.newFuture();
+                            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, url, jsonBody, future, new Response.ErrorListener() {
                                 @Override
                                 public void onErrorResponse(VolleyError error) {
                                     Log.d("dede", "error1 " + error.toString());
+                                    errorFlag[0] = true;
                                 }
                             });
 
-                    queue.add(jsonRequest);
-                    File newFile = new File(file.getAbsolutePath() + "_SENT");
-                    file.renameTo(newFile);
-                    refreshCount();
+                            queue.add(request);
+                            try {
+                                JSONObject rjo = future.get(10, TimeUnit.SECONDS);
+                                String bundleId = rjo.getString("bundleId");
+                                JSONArray data = jobj.getJSONArray("data");
+                                Log.d("dede", "4. receive bundleId " + rjo.toString() + " count : " + data.length());
+                                for(int i=0; i<data.length(); i++) {
+                                    JSONObject sample = data.getJSONObject(i);
+                                    sample.put("bundleId", Integer.parseInt(bundleId));
+                                    Log.d("dede", "5. send sample " + sample.toString());
+                                    String url2 = "http://ec2-54-191-70-38.us-west-2.compute.amazonaws.com:8100/sample";
+                                    RequestFuture<JSONObject> future2 = RequestFuture.newFuture();
+                                    JsonObjectRequest request2 = new JsonObjectRequest(Request.Method.POST, url2, sample, future2,
+                                            new Response.ErrorListener() {
+                                                @Override
+                                                public void onErrorResponse(VolleyError error) {
+                                                    Log.d("dede", "error2 " + error.toString());
+                                                    errorFlag[0] = true;
+                                                }
+                                            });
+                                    queue.add(request2);
+                                    JSONObject res = future2.get(5, TimeUnit.SECONDS);
+                                    Log.d("dede", res.toString());
+                                }
+
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            } catch (ExecutionException e) {
+                                e.printStackTrace();
+                            }catch (TimeoutException e) {
+                                e.printStackTrace();
+                                Log.d("dede", "error! timeout1");
+                                errorFlag[0] = true;
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                                errorFlag[0] = true;
+                            }
+                            if(errorFlag[0] == false) {
+                                Log.d("dede", "success!");
+                                File newFile = new File(file.getAbsolutePath() + "_SENT");
+                                file.renameTo(newFile);
+                                MainActivity.this.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        refreshCount();
+                                    }
+                                });
+
+                            }
+                            else {
+                                Log.d("dede", "fail!");
+                            }
+                        }
+                    }
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast toast = Toast.makeText(getApplicationContext(), "Send Done" , Toast.LENGTH_SHORT);
+                            toast.show();
+                        }
+                    });
                 }
             }
-        }
-        refreshCount();
+        }).start();
     }
 
     @Override
@@ -232,6 +276,7 @@ public class MainActivity extends AppCompatActivity {
         send_button = (Button) findViewById(R.id.send_button);
 
         queue = Volley.newRequestQueue(this);
+
 
         send_button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
